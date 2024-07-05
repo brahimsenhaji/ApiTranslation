@@ -136,16 +136,15 @@
             table = document.getElementById("translation-table");
             tr = table.getElementsByTagName("tr");
 
-            // Loop through all table rows, and hide those who don't match the search query
             for (i = 0; i < tr.length; i++) {
-                tr[i].classList.remove("highlight"); // Remove highlight class from all rows
+                tr[i].classList.remove("highlight"); 
                 td = tr[i].getElementsByTagName("td");
                 for (var j = 0; j < td.length; j++) {
                     if (td[j]) {
                         txtValue = td[j].textContent || td[j].innerText;
                         if (txtValue.toUpperCase().indexOf(filter) > -1) {
                             tr[i].classList.add("highlight");
-                            break; // Stop searching once a match is found in the row
+                            break; 
                         }
                     }
                 }
