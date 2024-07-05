@@ -16,26 +16,61 @@
             text-align: center;
             color: #333;
         }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
         th, td {
-            padding: 10px;
+            padding: 12px;
             text-align: center;
             border: 1px solid #ddd;
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #3498db;
+            color: #fff;
         }
         td {
-            background-color: #fff;
+            background-color: #f9f9f9;
+        }
+        .highlight {
+            background-color: #ffeb3b; /* Highlight color */
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="search-container">
+            <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for keywords...">
+        </div>
         <table id="translation-table" border="1" cellspacing="0" cellpadding="8">
             <thead>
                 <tr>
@@ -93,6 +128,29 @@
         </table>
     </div>
 
-    
+    <script>
+        function searchTable() {
+            var input, filter, table, tr, td, i, txtValue;
+            input = document.getElementById("searchInput");
+            filter = input.value.toUpperCase();
+            table = document.getElementById("translation-table");
+            tr = table.getElementsByTagName("tr");
+
+            // Loop through all table rows, and hide those who don't match the search query
+            for (i = 0; i < tr.length; i++) {
+                tr[i].classList.remove("highlight"); // Remove highlight class from all rows
+                td = tr[i].getElementsByTagName("td");
+                for (var j = 0; j < td.length; j++) {
+                    if (td[j]) {
+                        txtValue = td[j].textContent || td[j].innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            tr[i].classList.add("highlight");
+                            break; // Stop searching once a match is found in the row
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
