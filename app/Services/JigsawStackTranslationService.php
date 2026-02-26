@@ -1,91 +1,71 @@
 <?php
+
 namespace App\Services;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class JigsawStackTranslationService
 {
-    protected $client;
-    protected $translateUrl = 'https://api.jigsawstack.com/v1/ai/translate';
-    protected $transliterateUrl = 'https://api.jigsawstack.com/v1/ai/transliterate';
-    protected $apiKey;
+    private string $translateUrl;
+    private ?string $apiKey;
 
     public function __construct()
     {
-        $this->client = new Client([
-            'verify' => 'D:\xampp\apache\bin\curl-ca-bundle.crt'
-        ]);
-        $this->apiKey = env('JIGSAW_STACK_API_KEY');
+        $this->translateUrl = config('services.jigsawstack.translate_url');
+        $this->apiKey = config('services.jigsawstack.key');
     }
 
     public function translate(string $text, string $currentLanguage, string $targetLanguage): ?string
     {
-        try {
-            $response = $this->client->post($this->translateUrl, [
-                'headers' => [
-                    'x-api-key' => $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'current_language' => $currentLanguage,
-                    'target_language' => $targetLanguage,
-                    'text' => $text,
-                ],
-            ]);
-
-            if ($response->getStatusCode() === 200) {
-                $responseData = json_decode($response->getBody()->getContents(), true);
-                return $responseData['translated_text'] ?? null;
-            } else {
-                Log::error('Translation API returned status code: ' . $response->getStatusCode());
-            }
-        } catch (RequestException $e) {
-            if ($e->hasResponse()) {
-                $statusCode = $e->getResponse()->getStatusCode();
-                Log::error('Translation API request failed with status ' . $statusCode . ': ' . $e->getMessage());
-            } else {
-                Log::error('Translation API request failed: ' . $e->getMessage());
-            }
-        } catch (\Exception $e) {
-            Log::error('Translation API request failed: ' . $e->getMessage());
+        if (!$this->apiKey) {
+            Log::error('JigsawStack API Error', ['message' => 'API key not set']);
+            return null;
         }
 
-        return null;
+        try {
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'x-api-key' => $this->apiKey,
+            ])->post($this->translateUrl, [
+                'current_language' => $currentLanguage,
+                'target_language' => $targetLanguage,
+                'text' => $text,
+            ]);
+
+            if ($response->successful() && isset($response->json()['translated_text'])) {
+                return $response->json()['translated_text'];
+            }
+
+            Log::error('JigsawStack API Error', [
+                'status' => $response->status(),
+                'message' => $response->json()['message'] ?? 'Unknown error',
+            ]);
+
+            return null;
+        } catch (\Throwable $exception) {
+            Log::error('JigsawStack API Exception', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
-    public function transliterate(string $text, string $targetLanguage): ?string
+    public function translateBatch(array $keywords, string $sourceLanguage, array $targetLanguages): array
     {
-        try {
-            $response = $this->client->get($this->transliterateUrl, [
-                'headers' => [
-                    'x-api-key' => $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ],
-                'query' => [
-                    'text' => $text,
-                    'target' => $targetLanguage,
-                ],
-            ]);
+        $translations = [];
 
-            if ($response->getStatusCode() === 200) {
-                $responseData = json_decode($response->getBody()->getContents(), true);
-                return $responseData['transliteratedText'] ?? null;
-            } else {
-                Log::error('Transliteration API returned status code: ' . $response->getStatusCode());
+        foreach ($keywords as $keyword) {
+            $translations[$keyword] = [];
+
+            foreach ($targetLanguages as $language) {
+                $translations[$keyword][$language] =
+                    $this->translate($keyword, $sourceLanguage, $language)
+                    ?? sprintf('[%s] %s', $language, $keyword);
             }
-        } catch (RequestException $e) {
-            if ($e->hasResponse()) {
-                $statusCode = $e->getResponse()->getStatusCode();
-                Log::error('Transliteration API request failed with status ' . $statusCode . ': ' . $e->getMessage());
-            } else {
-                Log::error('Transliteration API request failed: ' . $e->getMessage());
-            }
-        } catch (\Exception $e) {
-            Log::error('Transliteration API request failed: ' . $e->getMessage());
         }
 
-        return null;
+        return $translations;
     }
 }
