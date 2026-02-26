@@ -31,4 +31,9 @@ return [
         ],
     ],
 
+    'jigsawstack' => [
+        'key' => env('JIGSAWSTACK_API_KEY'),
+        'translate_url' => env('JIGSAWSTACK_TRANSLATE_URL', 'https://api.jigsawstack.com/v1/ai/translate'),
+    ],
+
 ];
